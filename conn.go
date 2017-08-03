@@ -3,6 +3,7 @@ package pool
 import (
 	"net"
 	"sync"
+	"time"
 )
 
 // PoolConn is a wrapper around net.Conn to modify the the behavior of
@@ -11,6 +12,7 @@ type PoolConn struct {
 	net.Conn
 	mu       sync.RWMutex
 	c        *channelPool
+	idleAt   time.Time
 	unusable bool
 }
 
@@ -25,7 +27,8 @@ func (p *PoolConn) Close() error {
 		}
 		return nil
 	}
-	return p.c.put(p.Conn)
+	// TODO add timeout check
+	return p.c.put(p)
 }
 
 // MarkUnusable() marks the connection not usable any more, to let the pool close it instead of returning it to pool.
@@ -35,9 +38,12 @@ func (p *PoolConn) MarkUnusable() {
 	p.mu.Unlock()
 }
 
-// newConn wraps a standard net.Conn to a poolConn net.Conn.
-func (c *channelPool) wrapConn(conn net.Conn) net.Conn {
-	p := &PoolConn{c: c}
-	p.Conn = conn
-	return p
-}
+//// newConn wraps a standard net.Conn to a poolConn net.Conn.
+//func (c *channelPool) wrapConn(conn net.Conn) net.Conn {
+//p := &PoolConn{
+//c:      c,
+//idleAt: time.Now(),
+//}
+//p.Conn = conn
+//return p
+//}
